@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from src.models.triage_level import TriageLevel
 
 
 @dataclass(slots=True)
@@ -7,15 +8,19 @@ class SimulationMetrics:
     # Times
     # -------------------------
 
-    waiting_times: list[float] = field(default_factory=list)
+    arrival_to_consultation_times: list[float] = field(default_factory=list)
 
     registration_times: list[float] = field(default_factory=list)
 
     triage_times: list[float] = field(default_factory=list)
 
+    triage_levels: list[TriageLevel] = field(default_factory=list)
+
     consultation_times: list[float] = field(default_factory=list)
 
     system_times: list[float] = field(default_factory=list)
+
+    waiting_times: list[float] = field(default_factory=list)
 
     # -------------------------
     # Queues

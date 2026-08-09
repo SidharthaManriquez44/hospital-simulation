@@ -1,3 +1,5 @@
+from src.models.triage_level import TriageLevel
+
 """
 Global configuration for the hospital simulation.
 """
@@ -51,3 +53,27 @@ TRIAGE_MAX = 12
 
 CONSULTATION_MEAN = 20
 CONSULTATION_STD = 5
+
+# -----------------------------------------------------------------------------
+# ESI distribution
+# -----------------------------------------------------------------------------
+
+ESI_PROBABILITIES = {
+    TriageLevel.RED: 0.03,
+    TriageLevel.ORANGE: 0.05,
+    TriageLevel.YELLOW: 0.42,
+    TriageLevel.GREEN: 0.42,
+    TriageLevel.BLUE: 0.08,
+}
+
+# -----------------------------------------------------------------------------
+# Laboratory request probability by ESI
+# -----------------------------------------------------------------------------
+
+LABORATORY_PROBABILITIES = {
+    TriageLevel.RED: 0.95,
+    TriageLevel.ORANGE: 0.76,
+    TriageLevel.YELLOW: 0.55,
+    TriageLevel.GREEN: 0.15,
+    TriageLevel.BLUE: 0.02,
+}

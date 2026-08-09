@@ -4,9 +4,9 @@ import simpy
 
 from src.models.patient import Patient
 from src.models.patient_status import PatientStatus
-from src.models.triage_level import TriageLevel
 from src.resources.resources import HospitalResources
 from src.simulation.metrics import SimulationMetrics
+from src.business_rules.triage_rules import determine_triage_level
 from src import config
 
 
@@ -51,6 +51,8 @@ class HospitalProcesses:
         with self.resources.receptionists.request() as request:
             yield request
 
+            patient.waiting_time += self.env.now - patient.registration_start
+
             duration = self.rng.uniform(
                 config.REGISTRATION_MIN,
                 config.REGISTRATION_MAX,
@@ -74,6 +76,8 @@ class HospitalProcesses:
         with self.resources.triage_nurses.request() as request:
             yield request
 
+            patient.waiting_time += self.env.now - patient.triage_start
+
             duration = self.rng.triangular(
                 config.TRIAGE_MIN,
                 config.TRIAGE_MODE,
@@ -84,10 +88,10 @@ class HospitalProcesses:
 
         patient.triage_end = self.env.now
 
-        patient.triage_level = self._assign_triage_level()
+        patient.triage_level = determine_triage_level(self.rng)
 
         if patient.arrival_time >= config.WARMUP_TIME:
-            self.metrics.triage_times.append(patient.triage_end - patient.triage_start)
+            self.metrics.triage_levels.append(patient.triage_level)
 
     def consultation(self, patient: Patient):
         """Perform the initial medical consultation."""
@@ -99,11 +103,13 @@ class HospitalProcesses:
 
         yield self.env.all_of([doctor_request, room_request])
 
+        patient.waiting_time += self.env.now - patient.triage_end
+
         patient.status = PatientStatus.CONSULTATION
         patient.consultation_start = self.env.now
 
         if patient.arrival_time >= config.WARMUP_TIME:
-            self.metrics.waiting_times.append(
+            self.metrics.arrival_to_consultation_times.append(
                 patient.consultation_start - patient.arrival_time
             )
 
@@ -120,18 +126,7 @@ class HospitalProcesses:
         patient.consultation_end = self.env.now
 
         if patient.arrival_time >= config.WARMUP_TIME:
-            self.metrics.consultation_times.append(
-                patient.consultation_end - patient.consultation_start
-            )
+            self.metrics.waiting_times.append(patient.waiting_time)
 
         self.resources.doctors.release(doctor_request)
         self.resources.consulting_rooms.release(room_request)
-
-    def _assign_triage_level(self) -> TriageLevel:
-        """Assign a triage level to the patient.
-
-        Temporary Sprint 1 assumption:
-        all triage levels have equal probability.
-        """
-
-        return self.rng.choice(list(TriageLevel))

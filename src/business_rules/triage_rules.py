@@ -1,26 +1,57 @@
-from enum import IntEnum
+import random
 
-
-class TriageLevel(IntEnum):
-    RED = 1
-    ORANGE = 2
-    YELLOW = 3
-    GREEN = 4
-    BLUE = 5
+from src import config
+from src.models.triage_level import TriageLevel
 
 
 def get_priority(level: TriageLevel) -> int:
-    return level.value
+    """Return the numerical priority associated with a triage level."""
+
+    priorities = {
+        TriageLevel.RED: 1,
+        TriageLevel.ORANGE: 2,
+        TriageLevel.YELLOW: 3,
+        TriageLevel.GREEN: 4,
+        TriageLevel.BLUE: 5,
+    }
+
+    return priorities[level]
 
 
-def determine_next_area(triage_level):
+def determine_next_area(triage_level: TriageLevel) -> str:
+    """Determine the next clinical area based on the triage level."""
+
     if triage_level == TriageLevel.RED:
         return "shock_area"
 
-    if triage_level == TriageLevel.ORANGE:
-        return "consultation"
-
-    if triage_level == TriageLevel.YELLOW:
+    if triage_level in (
+        TriageLevel.ORANGE,
+        TriageLevel.YELLOW,
+    ):
         return "consultation"
 
     return "waiting_room"
+
+
+def determine_triage_level(
+    rng: random.Random,
+) -> TriageLevel:
+    levels = list(config.ESI_PROBABILITIES.keys())
+    probabilities = list(config.ESI_PROBABILITIES.values())
+
+    return rng.choices(
+        levels,
+        weights=probabilities,
+        k=1,
+    )[0]
+
+
+def requires_laboratory(
+    level: TriageLevel,
+    rng: random.Random,
+) -> bool:
+    """Determine whether laboratory testing is required based on ESI."""
+
+    probability = config.LABORATORY_PROBABILITIES[level]
+
+    return rng.random() < probability

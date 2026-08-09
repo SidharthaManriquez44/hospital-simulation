@@ -9,8 +9,10 @@ class Patient:
     id: int
 
     arrival_time: float
+    waiting_time: float = 0.0
 
     triage_level: Optional[TriageLevel] = None
+    requires_laboratory: bool = False
 
     status: PatientStatus = PatientStatus.ARRIVED
 
@@ -19,6 +21,9 @@ class Patient:
 
     triage_start: Optional[float] = None
     triage_end: Optional[float] = None
+
+    waiting_room_start: Optional[float] = None
+    waiting_room_end: Optional[float] = None
 
     consultation_start: Optional[float] = None
     consultation_end: Optional[float] = None
