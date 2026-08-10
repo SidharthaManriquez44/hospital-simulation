@@ -12,7 +12,6 @@ class Patient:
     waiting_time: float = 0.0
 
     triage_level: Optional[TriageLevel] = None
-    requires_laboratory: bool = False
 
     status: PatientStatus = PatientStatus.ARRIVED
 
@@ -27,5 +26,17 @@ class Patient:
 
     consultation_start: Optional[float] = None
     consultation_end: Optional[float] = None
+
+    requires_laboratory: bool = False
+
+    laboratory_start: Optional[float] = None
+    laboratory_end: Optional[float] = None
+
+    imaging_required: bool = False
+
+    imaging_modality: Optional[str] = None
+
+    imaging_start: Optional[float] = None
+    imaging_end: Optional[float] = None
 
     departure_time: Optional[float] = None

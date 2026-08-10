@@ -23,6 +23,31 @@ class SimulationMetrics:
     waiting_times: list[float] = field(default_factory=list)
 
     # -------------------------
+    # Laboratory
+    # -------------------------
+
+    laboratory_waiting_times: list[float] = field(default_factory=list)
+
+    laboratory_processing_times: list[float] = field(default_factory=list)
+
+    laboratory_tat_times: list[float] = field(default_factory=list)
+
+    laboratory_tat_without_waiting_times: list[float] = field(default_factory=list)
+
+    laboratory_patients_by_triage: dict[str, int] = field(default_factory=dict)
+
+    laboratory_requests_by_triage: dict[str, int] = field(default_factory=dict)
+    # -------------------------
+    # Imaging
+    # -------------------------
+
+    imaging_patients_by_triage: dict[str, int] = field(default_factory=dict)
+
+    imaging_requests_by_triage: dict[str, int] = field(default_factory=dict)
+
+    imaging_modalities: dict[str, int] = field(default_factory=dict)
+
+    # -------------------------
     # Queues
     # -------------------------
 
@@ -45,7 +70,7 @@ class SimulationMetrics:
     deaths: int = 0
 
     # -------------------------
-    # Utilización de recursos
+    # Resource utilization
     # -------------------------
 
     doctor_busy_time: float = 0.0

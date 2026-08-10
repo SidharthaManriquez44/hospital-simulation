@@ -12,11 +12,11 @@ class HospitalResources:
         nurses: int,
         doctors: int,
         consulting_rooms: int,
-        # laboratory_technicians: int = 0,
+        imaging_technicians: int,
+        laboratory_technicians: int,
         # pharmacy_staff: int = 0,
-        shock_area: int = 0,
-        # imaging_technicians: int = 0,
-        # observation_beds: int = 0,
+        # shock_area: int = 0,
+        observation_beds: int,
     ) -> None:
         self.receptionists = simpy.Resource(
             env,
@@ -43,11 +43,22 @@ class HospitalResources:
             capacity=consulting_rooms,
         )
 
-        """
+        self.imaging_technicians = simpy.Resource(
+            env,
+            capacity=imaging_technicians,
+        )
+
         self.laboratory_technicians = simpy.Resource(
             env,
             capacity=laboratory_technicians,
         )
+
+        self.observation_beds = simpy.Resource(
+            env,
+            capacity=observation_beds,
+        )
+        """
+
 
          self.shock_area = simpy.Resource(
             env,
@@ -59,12 +70,5 @@ class HospitalResources:
             capacity=pharmacy_staff,
         )
 
-        self.imaging_technicians = simpy.Resource(
-            env,
-            capacity=imaging_technicians,
-        )
 
-        self.observation_beds = simpy.Resource(
-            env,
-            capacity=observation_beds,
         ) """

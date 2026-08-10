@@ -1,56 +1,66 @@
-from collections import Counter
+import numpy as np
+import csv
+from pathlib import Path
 
-from src import config
-from src.scenarios.scenarios import SCENARIO_1
-from src.simulation.hospital import HospitalSimulation
+from src.experiments.runner import ExperimentRunner
+from src.scenarios.scenarios import SCENARIOS
 
 
-def main() -> None:
-    simulation = HospitalSimulation(
-        scenario=SCENARIO_1,
-        seed=42,
+def main():
+    print("Hospital Emergency Department Simulation")
+    print("=" * 45)
+    print()
+
+    runner = ExperimentRunner(
+        scenarios=SCENARIOS,
+        replications=30,
     )
 
-    metrics = simulation.run()
+    results = runner.run()
+    results_dir = Path("results")
+    results_dir.mkdir(exist_ok=True)
 
-    print("# Hospital Emergency Department Simulation")
+    results_file = results_dir / "scenario_results.csv"
+
+    with results_file.open(
+        "w",
+        newline="",
+        encoding="utf-8",
+    ) as file:
+        writer = csv.DictWriter(
+            file,
+            fieldnames=results[0].keys(),
+        )
+
+        writer.writeheader()
+        writer.writerows(results)
+
+    print("## Scenario Comparison")
     print()
-    print(f"Scenario: {SCENARIO_1.name}")
-    print(f"Patients arrived: {metrics.patients_arrived}")
-    print(f"Patients served: {metrics.patients_served}")
 
-    if metrics.waiting_times:
-        average_waiting_time = sum(metrics.waiting_times) / len(metrics.waiting_times)
+    print(
+        "| Scenario | Patients Arrived | Patients Served "
+        "| Avg Waiting Time | Avg System Time | Lab Requests |"
+    )
+    print("|---|---:|---:|---:|---:|---:|")
 
-        print(f"Average waiting time: {average_waiting_time:.2f} minutes")
+    scenario_names = []
 
-    if metrics.system_times:
-        average_system_time = sum(metrics.system_times) / len(metrics.system_times)
+    for scenario in SCENARIOS:
+        scenario_results = [
+            result for result in results if result["scenario"] == scenario.name
+        ]
 
-        print(f"Average system time: {average_system_time:.2f} minutes")
+        scenario_names.append(scenario.name)
 
-    if metrics.triage_levels:
-        triage_counts = Counter(metrics.triage_levels)
-        total_triage_patients = len(metrics.triage_levels)
-
-        print()
-        print("## ESI Distribution")
-        print()
-        print("| ESI | Expected | Observed | Difference (pp) |")
-        print("|---|---:|---:|---:|")
-
-        for level, expected_probability in config.ESI_PROBABILITIES.items():
-            observed_count = triage_counts.get(level, 0)
-            observed_probability = observed_count / total_triage_patients
-
-            difference = observed_probability - expected_probability
-
-            print(
-                f"| ESI {level.value} "
-                f"| {expected_probability:.2%} "
-                f"| {observed_probability:.2%} "
-                f"| {difference * 100:+.2f} pp |"
-            )
+        print(
+            f"| {scenario.name} "
+            f"| {np.mean([r['patients_arrived'] for r in scenario_results]):.0f} "
+            f"| {np.mean([r['patients_served'] for r in scenario_results]):.0f} "
+            f"| {np.mean([r['average_waiting_time'] for r in scenario_results]):.2f} min "
+            f"| {np.mean([r['average_system_time'] for r in scenario_results]):.2f} min "
+            f"| {np.mean([r['laboratory_requests'] for r in scenario_results]):.0f} |"
+        )
 
 
 if __name__ == "__main__":

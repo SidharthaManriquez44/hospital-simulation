@@ -33,9 +33,9 @@ class HospitalSimulation:
             nurses=scenario.nurses,
             doctors=scenario.doctors,
             consulting_rooms=scenario.consulting_rooms,
-            # laboratory_technicians=scenario.laboratory_technicians,
-            # imaging_technicians=scenario.imaging_technicians,
-            # observation_beds=scenario.observation_beds,
+            laboratory_technicians=scenario.laboratory_technicians,
+            imaging_technicians=scenario.imaging_technicians,
+            observation_beds=scenario.observation_beds,
         )
 
         self.processes = HospitalProcesses(
@@ -43,6 +43,7 @@ class HospitalSimulation:
             resources=self.resources,
             metrics=self.metrics,
             rng=self.rng,
+            scenario=scenario,
         )
 
         self.patient_id = 0
