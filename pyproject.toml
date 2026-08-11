@@ -11,4 +11,6 @@ dependencies = [
     "pandas",
     "matplotlib",
     "scipy",
+    "pytest",
+    "pytest-cov",
 ]
