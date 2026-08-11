@@ -44,14 +44,3 @@ def determine_triage_level(
         weights=probabilities,
         k=1,
     )[0]
-
-
-def requires_laboratory(
-    level: TriageLevel,
-    rng: random.Random,
-) -> bool:
-    """Determine whether laboratory testing is required based on ESI."""
-
-    probability = config.LABORATORY_PROBABILITIES[level]
-
-    return rng.random() < probability

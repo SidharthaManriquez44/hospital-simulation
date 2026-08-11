@@ -34,18 +34,15 @@ class SimulationMetrics:
 
     laboratory_tat_without_waiting_times: list[float] = field(default_factory=list)
 
-    laboratory_patients_by_triage: dict[str, int] = field(default_factory=dict)
-
-    laboratory_requests_by_triage: dict[str, int] = field(default_factory=dict)
     # -------------------------
     # Imaging
     # -------------------------
 
-    imaging_patients_by_triage: dict[str, int] = field(default_factory=dict)
-
-    imaging_requests_by_triage: dict[str, int] = field(default_factory=dict)
-
     imaging_modalities: dict[str, int] = field(default_factory=dict)
+
+    imaging_times: list[float] = field(default_factory=list)
+
+    imaging_requests_by_modality: dict[str, int] = field(default_factory=dict)
 
     # -------------------------
     # Queues

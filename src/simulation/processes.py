@@ -1,19 +1,21 @@
 import random
-
 import simpy
 
-from models.triage_level import TriageLevel
-from scenarios.scenarios import Scenario
+from src.scenarios.scenarios import Scenario
 from src.models.patient import Patient
 from src.models.patient_status import PatientStatus
 from src.resources.resources import HospitalResources
 from src.simulation.metrics import SimulationMetrics
 from src.business_rules.triage_rules import (
     determine_triage_level,
-    requires_laboratory,
 )
+
+from src.business_rules.diagnostic_rules import (
+    physician_orders_laboratory,
+    physician_orders_imaging,
+)
+
 from src.business_rules.imaging_rules import (
-    requires_imaging,
     determine_imaging_modality,
 )
 from src import config
@@ -43,7 +45,6 @@ class HospitalProcesses:
         yield from self.triage(patient)
         yield from self.consultation(patient)
 
-        patient.status = PatientStatus.DISCHARGED
         patient.departure_time = self.env.now
 
         self.metrics.patients_served += 1
@@ -55,7 +56,6 @@ class HospitalProcesses:
 
     def registration(self, patient: Patient):
         """Register the patient."""
-
         patient.status = PatientStatus.REGISTRATION
         patient.registration_start = self.env.now
 
@@ -102,21 +102,10 @@ class HospitalProcesses:
         patient.triage_level = determine_triage_level(self.rng)
 
         if patient.arrival_time >= config.WARMUP_TIME:
-            triage_key = patient.triage_level.value
-
-            self.metrics.laboratory_patients_by_triage[triage_key] = (
-                self.metrics.laboratory_patients_by_triage.get(
-                    triage_key,
-                    0,
-                )
-                + 1
-            )
-
-        if patient.arrival_time >= config.WARMUP_TIME:
             self.metrics.triage_levels.append(patient.triage_level)
 
     def consultation(self, patient: Patient):
-        """Perform the initial medical consultation."""
+        """Perform the initial medical evaluation."""
 
         patient.status = PatientStatus.WAITING_DOCTOR
 
@@ -143,99 +132,48 @@ class HospitalProcesses:
             ),
         )
 
-        if self.scenario.fast_track and patient.triage_level in (
-            TriageLevel.GREEN,
-            TriageLevel.BLUE,
-        ):
-            duration *= config.FAST_TRACK_CONSULTATION_FACTOR
-
         yield self.env.timeout(duration)
 
         patient.consultation_end = self.env.now
-
-        # -----------------------------------------------------------------
-        # Laboratory decision
-        # -----------------------------------------------------------------
-
-        patient.requires_laboratory = requires_laboratory(
-            patient.triage_level,
-            self.rng,
-        )
-
-        if patient.requires_laboratory and patient.arrival_time >= config.WARMUP_TIME:
-            triage_key = patient.triage_level.value
-
-            self.metrics.laboratory_requests_by_triage[triage_key] = (
-                self.metrics.laboratory_requests_by_triage.get(
-                    triage_key,
-                    0,
-                )
-                + 1
-            )
-
-        # -----------------------------------------------------------------
-        # Imaging decision
-        # -----------------------------------------------------------------
-
-        patient.imaging_required = requires_imaging(
-            patient.triage_level,
-            self.rng,
-        )
-
-        if patient.imaging_required:
-            patient.imaging_modality = determine_imaging_modality(
-                self.rng,
-            )
-
-        if patient.arrival_time >= config.WARMUP_TIME:
-            triage_key = patient.triage_level.value
-
-            self.metrics.imaging_patients_by_triage[triage_key] = (
-                self.metrics.imaging_patients_by_triage.get(
-                    triage_key,
-                    0,
-                )
-                + 1
-            )
-
-            if patient.imaging_required:
-                self.metrics.imaging_requests_by_triage[triage_key] = (
-                    self.metrics.imaging_requests_by_triage.get(
-                        triage_key,
-                        0,
-                    )
-                    + 1
-                )
-
-                self.metrics.imaging_modalities[patient.imaging_modality] = (
-                    self.metrics.imaging_modalities.get(
-                        patient.imaging_modality,
-                        0,
-                    )
-                    + 1
-                )
-
-        # -----------------------------------------------------------------
-        # Consultation metrics
-        # -----------------------------------------------------------------
 
         if patient.arrival_time >= config.WARMUP_TIME:
             self.metrics.consultation_times.append(
                 patient.consultation_end - patient.consultation_start
             )
-
             self.metrics.waiting_times.append(patient.waiting_time)
 
-        # Release medical resources immediately after consultation.
         self.resources.doctors.release(doctor_request)
         self.resources.consulting_rooms.release(room_request)
 
-        # -----------------------------------------------------------------
-        # Laboratory process
-        # -----------------------------------------------------------------
+        yield from self.diagnostic_evaluation(patient)
+
+    def diagnostic_evaluation(self, patient: Patient):
+        """Determine whether additional diagnostic information is required."""
+
+        patient.requires_laboratory = physician_orders_laboratory(
+            patient.triage_level,
+            self.rng,
+        )
+
+        patient.imaging_required = physician_orders_imaging(
+            patient.triage_level,
+            self.rng,
+        )
+
+        diagnostic_processes = []
 
         if patient.requires_laboratory:
-            yield from self.laboratory(patient)
+            diagnostic_processes.append(self.env.process(self.laboratory(patient)))
+
+        if patient.imaging_required:
+            patient.imaging_modality = determine_imaging_modality(self.rng)
+
+            diagnostic_processes.append(self.env.process(self.imaging(patient)))
+
+        if diagnostic_processes:
+            yield self.env.all_of(diagnostic_processes)
+
+        self.diagnosis(patient)
 
     def laboratory(self, patient: Patient):
         """Process laboratory testing for the patient."""
@@ -294,6 +232,76 @@ class HospitalProcesses:
                 sample_duration + transport_duration + processing_duration
             )
 
-    def determine_imaging(self, patient: Patient) -> None:
-        """Determine whether the patient requires imaging."""
-        pass
+    def imaging(self, patient: Patient):
+        """Process the imaging study requested by the physician."""
+
+        patient.status = PatientStatus.IMAGING
+        patient.imaging_start = self.env.now
+
+        try:
+            minimum, mode, maximum = config.IMAGING_DURATION_PARAMETERS[
+                patient.imaging_modality
+            ]
+        except KeyError as exc:
+            raise ValueError(
+                f"Unsupported imaging modality: {patient.imaging_modality}"
+            ) from exc
+
+        duration = self.rng.triangular(
+            minimum,
+            maximum,
+            mode,
+        )
+
+        yield self.env.timeout(duration)
+
+        patient.imaging_end = self.env.now
+
+        if patient.arrival_time >= config.WARMUP_TIME:
+            self.metrics.imaging_times.append(
+                patient.imaging_end - patient.imaging_start
+            )
+
+        if patient.arrival_time >= config.WARMUP_TIME:
+            self.metrics.imaging_requests_by_modality[patient.imaging_modality] = (
+                self.metrics.imaging_requests_by_modality.get(
+                    patient.imaging_modality,
+                    0,
+                )
+                + 1
+            )
+
+    def diagnosis(self, patient: Patient):
+        """Establish the medical diagnosis after clinical evaluation."""
+
+        patient.diagnosis_confirmed = True
+
+        # yield from self.treatment(patient)
+
+    def treatment(self, patient: Patient):
+        """Provide the treatment determined by the physician."""
+
+        patient.status = PatientStatus.TREATMENT
+
+        duration = max(
+            1.0,
+            self.rng.gauss(
+                config.TREATMENT_MEAN,
+                config.TREATMENT_STD,
+            ),
+        )
+
+        yield self.env.timeout(duration)
+
+        yield from self.disposition(patient)
+
+    def pharmacy(self, patient: Patient): ...
+
+    def disposition(self, patient: Patient):
+        """Determine the patient's final clinical disposition."""
+
+        ...
+
+    def observation(self, patient: Patient): ...
+
+    def hospitalization(self, patient: Patient): ...

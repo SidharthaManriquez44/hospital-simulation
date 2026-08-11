@@ -59,5 +59,4 @@ class ExperimentRunner:
             "average_system_time": (
                 float(np.mean(metrics.system_times)) if metrics.system_times else 0.0
             ),
-            "laboratory_requests": sum(metrics.laboratory_requests_by_triage.values()),
         }

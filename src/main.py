@@ -40,7 +40,7 @@ def main():
 
     print(
         "| Scenario | Patients Arrived | Patients Served "
-        "| Avg Waiting Time | Avg System Time | Lab Requests |"
+        "| Avg Waiting Time | Avg System Time | "
     )
     print("|---|---:|---:|---:|---:|---:|")
 
@@ -59,7 +59,6 @@ def main():
             f"| {np.mean([r['patients_served'] for r in scenario_results]):.0f} "
             f"| {np.mean([r['average_waiting_time'] for r in scenario_results]):.2f} min "
             f"| {np.mean([r['average_system_time'] for r in scenario_results]):.2f} min "
-            f"| {np.mean([r['laboratory_requests'] for r in scenario_results]):.0f} |"
         )
 
 

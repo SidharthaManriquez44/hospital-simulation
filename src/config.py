@@ -132,6 +132,29 @@ MRI_MIN = 108
 MRI_MODE = 156
 MRI_MAX = 222
 
+IMAGING_DURATION_PARAMETERS = {
+    "xray": (
+        XRAY_MIN,
+        XRAY_MODE,
+        XRAY_MAX,
+    ),
+    "ct": (
+        CT_MIN,
+        CT_MODE,
+        CT_MAX,
+    ),
+    "ultrasound": (
+        ULTRASOUND_MIN,
+        ULTRASOUND_MODE,
+        ULTRASOUND_MAX,
+    ),
+    "mri": (
+        MRI_MIN,
+        MRI_MODE,
+        MRI_MAX,
+    ),
+}
+
 # -----------------------------------------------------------------------------
 # Fast Track
 # -----------------------------------------------------------------------------
