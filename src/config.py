@@ -1,4 +1,6 @@
 from src.models.triage_level import TriageLevel
+from src.models.medication_category import MedicationCategory
+
 
 """
 Global configuration for the hospital simulation.
@@ -160,3 +162,113 @@ IMAGING_DURATION_PARAMETERS = {
 # -----------------------------------------------------------------------------
 
 FAST_TRACK_CONSULTATION_FACTOR = 0.50
+
+# -----------------------------------------------------------------------------
+# Treatment
+# -----------------------------------------------------------------------------
+
+MEDICATION_PROBABILITY = 0.774
+
+# -----------------------------------------------------------------------------
+# Medication administration duration parameters
+# -----------------------------------------------------------------------------
+
+MEDICATION_ORAL_MIN = 2
+MEDICATION_ORAL_MODE = 5
+MEDICATION_ORAL_MAX = 8
+
+MEDICATION_IM_SC_MIN = 2
+MEDICATION_IM_SC_MODE = 5
+MEDICATION_IM_SC_MAX = 8
+
+MEDICATION_IV_BOLUS_MIN = 3
+MEDICATION_IV_BOLUS_MODE = 6
+MEDICATION_IV_BOLUS_MAX = 10
+
+MEDICATION_IV_INFUSION_MIN = 5
+MEDICATION_IV_INFUSION_MODE = 12
+MEDICATION_IV_INFUSION_MAX = 20
+
+MEDICATION_CRITICAL_MIN = 1
+MEDICATION_CRITICAL_MODE = 3
+MEDICATION_CRITICAL_MAX = 5
+
+# -----------------------------------------------------------------------------
+# Pharmacy
+# -----------------------------------------------------------------------------
+
+PHARMACY_VALIDATION_MIN = 1
+PHARMACY_VALIDATION_MODE = 4
+PHARMACY_VALIDATION_MAX = 7
+
+PHARMACY_PREPARATION_MIN = 3
+PHARMACY_PREPARATION_MODE = 7
+PHARMACY_PREPARATION_MAX = 12
+
+PHARMACY_DISTRIBUTION_MIN = 1
+PHARMACY_DISTRIBUTION_MODE = 3
+PHARMACY_DISTRIBUTION_MAX = 6
+
+# -----------------------------------------------------------------------------
+# Medication category weights
+# -----------------------------------------------------------------------------
+
+MEDICATION_CATEGORY_WEIGHTS = {
+    "analgesia": 22.80,
+    "antibiotic": 5.40,
+    "antiemetic": 9.60,
+    "bronchodilator": 3.20,
+    "antiplatelet": 1.70,
+    "insulin_glucose": 1.30,
+}
+
+# -----------------------------------------------------------------------------
+# Pharmacy probabilities
+# -----------------------------------------------------------------------------
+
+PHARMACY_PREPARATION_PROBABILITIES = {
+    MedicationCategory.ANALGESIA: 0.10,
+    MedicationCategory.ANTIBIOTIC: 0.30,
+    MedicationCategory.ANTIEMETIC: 0.05,
+    MedicationCategory.BRONCHODILATOR: 0.02,
+    MedicationCategory.ANTICOAGULATION: 0.30,
+    MedicationCategory.ANTIPLATELET: 0.05,
+    MedicationCategory.VASOPRESSOR: 0.80,
+    MedicationCategory.INSULIN_GLUCOSE: 0.25,
+    MedicationCategory.OTHER: 0.15,
+}
+
+# -----------------------------------------------------------------------------
+# Observation
+# -----------------------------------------------------------------------------
+
+OBSERVATION_GLOBAL_PROBABILITY = 0.025
+
+OBSERVATION_MIN = 480
+OBSERVATION_MODE = 1080
+OBSERVATION_MAX = 1440
+
+OBSERVATION_FOLLOW_UP_PROBABILITY = 0.64
+OBSERVATION_HOSPITALIZATION_PROBABILITY = 0.36
+
+OBSERVATION_DETERIORATION_PROBABILITIES = {
+    TriageLevel.RED: 0.25,
+    TriageLevel.ORANGE: 0.18,
+    TriageLevel.YELLOW: 0.11,
+    TriageLevel.GREEN: 0.05,
+    TriageLevel.BLUE: 0.015,
+}
+
+OBSERVATION_GLOBAL_DETERIORATION_REFERENCE = 0.10
+
+RESUSCITATION_ROSC_PROBABILITY = 0.30
+
+# -----------------------------------------------------------------------------
+# Shock
+# -----------------------------------------------------------------------------
+
+SHOCK_MIN = 20
+SHOCK_MODE = 50
+SHOCK_MAX = 120
+
+SHOCK_TO_OBSERVATION_PROBABILITY = 0.20
