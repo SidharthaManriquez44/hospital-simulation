@@ -28,14 +28,7 @@ class HospitalSimulation:
 
         self.resources = HospitalResources(
             env=self.env,
-            receptionists=scenario.receptionists,
-            triage_nurses=scenario.triage_nurses,
-            nurses=scenario.nurses,
-            doctors=scenario.doctors,
-            consulting_rooms=scenario.consulting_rooms,
-            laboratory_technicians=scenario.laboratory_technicians,
-            imaging_technicians=scenario.imaging_technicians,
-            observation_beds=scenario.observation_beds,
+            scenario=scenario,
         )
 
         self.processes = HospitalProcesses(
