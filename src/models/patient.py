@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from src.models.medication_route import MedicationRoute
+from src.models.diagnosis import Diagnosis
 from src.models.patient_status import PatientStatus
 from src.models.triage_level import TriageLevel
 
@@ -83,6 +84,7 @@ class Patient:
     # Diagnosis
     # -------------------------
 
+    diagnosis: Optional[Diagnosis] = None
     diagnosis_confirmed: bool = False
 
     # -------------------------
@@ -183,3 +185,19 @@ class Patient:
     # -------------------------
     consultation_start: Optional[float] = None
     consultation_end: Optional[float] = None
+
+    # -------------------------
+    # Shock disposition
+    # -------------------------
+
+    hemodynamic_stability: bool = False
+
+    requires_definitive_intervention: bool = False
+
+    critical_support_required: bool = False
+
+    observation_eligible: bool = False
+
+    inpatient_care_need: bool = False
+
+    discharge_eligible: bool = False
