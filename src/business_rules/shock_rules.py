@@ -1,6 +1,7 @@
 import random
 
 from src.models.patient import Patient
+from src.models.diagnosis import Diagnosis
 from src.models.triage_level import TriageLevel
 from src import config
 
@@ -25,20 +26,20 @@ def shock_is_stabilized(patient: Patient) -> bool:
     return patient.shock_stabilized
 
 
-def requires_surgery(diagnosis: str) -> bool:
-    """Determine whether the patient requires surgical intervention."""
+def requires_surgery(diagnosis: Diagnosis) -> bool:
+    """Determine whether the diagnosis requires surgical intervention."""
 
     return diagnosis in {
-        "severe_tbi",
-        "hemorrhagic_shock",
-        "tension_pneumothorax",
-        "unstable_pelvic_fracture",
+        Diagnosis.SEVERE_TBI,
+        Diagnosis.HEMORRHAGIC_SHOCK,
+        Diagnosis.TENSION_PNEUMOTHORAX,
+        Diagnosis.UNSTABLE_PELVIC_FRACTURE,
     }
 
 
 def requires_cardiac_catheterization(
-    diagnosis: str,
+    diagnosis: Diagnosis,
 ) -> bool:
-    """Determine whether the patient requires cardiac intervention."""
+    """Determine whether the diagnosis requires cardiac intervention."""
 
-    return diagnosis == "acute_myocardial_infarction"
+    return diagnosis == Diagnosis.ACUTE_MYOCARDIAL_INFARCTION
