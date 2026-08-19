@@ -1,7 +1,9 @@
 import random
 import simpy
 
+from src.models.disposition import Disposition
 from src.business_rules.resuscitation_rules import resuscitation_achieves_rosc
+from src.clinical.decision_engine import ClinicalDecisionEngine
 from src.scenarios.scenarios import Scenario
 from src.models.patient import Patient
 from src.models.patient_status import PatientStatus
@@ -30,7 +32,6 @@ from src.business_rules.treatment_rules import (
 )
 from src.business_rules.observation_rules import (
     deteriorates_in_observation,
-    determine_observation_disposition,
 )
 from src import config
 
@@ -45,12 +46,14 @@ class HospitalProcesses:
         metrics: SimulationMetrics,
         rng: random.Random,
         scenario: Scenario,
+        clinical_decision_engine: ClinicalDecisionEngine,
     ) -> None:
         self.env = env
         self.resources = resources
         self.metrics = metrics
         self.rng = rng
         self.scenario = scenario
+        self.clinical_decision_engine = clinical_decision_engine
 
     def patient_process(self, patient: Patient):
         """Execute the patient's process through the emergency department."""
@@ -525,20 +528,18 @@ class HospitalProcesses:
 
                 yield from self.resuscitation(patient)
 
+                if patient.deceased:
+                    return
+
+                self.disposition(patient)
+
                 return
 
             yield self.env.timeout(observation_duration)
 
             patient.observation_end = self.env.now
 
-            patient.disposition = determine_observation_disposition(
-                self.rng,
-            )
-
-            if patient.disposition == "follow_up":
-                patient.outpatient_referral = True
-            else:
-                patient.hospitalized = True
+            self.disposition(patient)
 
             patient.current_area = None
             patient.departure_time = self.env.now
@@ -564,21 +565,13 @@ class HospitalProcesses:
         patient.shock_stabilized = True
         patient.clinical_status = "stabilized"
 
-        # The patient leaves the emergency department model.
-        patient.hospitalized = True
-        patient.disposition = "hospitalization"
-        patient.departure_time = self.env.now
-
         yield self.env.timeout(1)
 
-    def disposition(self, patient: Patient):
+    def disposition(self, patient: Patient) -> Disposition:
         """Determine the patient's final clinical disposition."""
 
-        ...
+        patient.disposition = self.clinical_decision_engine.determine_disposition(
+            patient,
+        )
 
-    def requires_hospitalization(
-        rng: random.Random,
-    ) -> bool:
-        """Determine whether the patient requires hospital admission."""
-
-        ...
+        return patient.disposition

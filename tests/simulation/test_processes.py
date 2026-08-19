@@ -1,37 +1,22 @@
 import pytest
 import random
 
-import simpy
 
+from src.models.disposition import Disposition
 from src.business_rules.treatment_rules import determine_medication_route
 from src.models.medication_category import MedicationCategory
 from src.models.medication_route import MedicationRoute
 from src.models.patient_status import PatientStatus
 from src.models.patient import Patient
-from src.resources.resources import HospitalResources
-from src.scenarios.scenarios import SCENARIO_1_MORNING
-from src.simulation.metrics import SimulationMetrics
-from src.simulation.processes import HospitalProcesses
+
 from src.models.triage_level import TriageLevel
 
 
-def test_consultation_uses_doctor_and_consulting_room(monkeypatch):
-    env = simpy.Environment()
-    metrics = SimulationMetrics()
-
-    resources = HospitalResources(
-        env=env,
-        scenario=SCENARIO_1_MORNING,
-    )
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=random.Random(42),
-        scenario=SCENARIO_1_MORNING,
-    )
-
+def test_consultation_uses_doctor_and_consulting_room(
+    monkeypatch,
+    hospital_processes,
+):
+    processes = hospital_processes
     patient = Patient(
         id=1,
         arrival_time=0.0,
@@ -50,30 +35,20 @@ def test_consultation_uses_doctor_and_consulting_room(monkeypatch):
         fake_diagnostic_evaluation,
     )
 
-    env.process(processes.consultation(patient))
+    processes.env.process(processes.consultation(patient))
 
-    env.run()
+    processes.env.run()
 
     assert patient.consultation_start is not None
     assert patient.consultation_end is not None
 
 
-def test_consultation_releases_doctor_and_room(monkeypatch):
-    env = simpy.Environment()
-    metrics = SimulationMetrics()
+def test_consultation_releases_doctor_and_room(
+    monkeypatch,
+    hospital_processes,
+):
 
-    resources = HospitalResources(
-        env=env,
-        scenario=SCENARIO_1_MORNING,
-    )
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=random.Random(42),
-        scenario=SCENARIO_1_MORNING,
-    )
+    processes = hospital_processes
 
     patient_1 = Patient(
         id=1,
@@ -99,54 +74,27 @@ def test_consultation_releases_doctor_and_room(monkeypatch):
         fake_diagnostic_evaluation,
     )
 
-    env.process(processes.consultation(patient_1))
+    processes.env.process(processes.consultation(patient_1))
 
-    env.run()
+    processes.env.run()
 
-    assert resources.doctors.count == 0
-    assert resources.consulting_rooms.count == 0
+    assert processes.resources.doctors.count == 0
+    assert processes.resources.consulting_rooms.count == 0
 
-    env.process(processes.consultation(patient_2))
+    processes.env.process(processes.consultation(patient_2))
 
-    env.run()
+    processes.env.run()
 
     assert patient_2.consultation_start is not None
 
 
-def create_processes():
-    env = simpy.Environment()
-    metrics = SimulationMetrics()
-
-    resources = HospitalResources(
-        env=env,
-        scenario=SCENARIO_1_MORNING,
-    )
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=random.Random(42),
-        scenario=SCENARIO_1_MORNING,
-    )
-
-    return env, processes
-
-
-def create_patient():
-    patient = Patient(
-        id=1,
-        arrival_time=0.0,
-    )
-
-    patient.triage_level = TriageLevel.YELLOW
-
-    return patient
-
-
-def test_diagnostic_evaluation_without_studies(monkeypatch):
-    env, processes = create_processes()
-    patient = create_patient()
+def test_diagnostic_evaluation_without_studies(
+    monkeypatch,
+    hospital_processes,
+    create_patient,
+):
+    processes = hospital_processes
+    patient = create_patient
 
     monkeypatch.setattr(
         "src.simulation.processes.physician_orders_laboratory",
@@ -158,17 +106,21 @@ def test_diagnostic_evaluation_without_studies(monkeypatch):
         lambda level, rng: False,
     )
 
-    env.process(processes.diagnostic_evaluation(patient))
+    processes.env.process(processes.diagnostic_evaluation(patient))
 
-    env.run()
+    processes.env.run()
 
     assert patient.requires_laboratory is False
     assert patient.imaging_required is False
 
 
-def test_diagnostic_evaluation_with_laboratory(monkeypatch):
-    env, processes = create_processes()
-    patient = create_patient()
+def test_diagnostic_evaluation_with_laboratory(
+    monkeypatch,
+    hospital_processes,
+    create_patient,
+):
+    processes = hospital_processes
+    patient = create_patient
 
     monkeypatch.setattr(
         "src.simulation.processes.physician_orders_laboratory",
@@ -180,18 +132,22 @@ def test_diagnostic_evaluation_with_laboratory(monkeypatch):
         lambda level, rng: False,
     )
 
-    env.process(processes.diagnostic_evaluation(patient))
+    processes.env.process(processes.diagnostic_evaluation(patient))
 
-    env.run()
+    processes.env.run()
 
     assert patient.requires_laboratory is True
     assert patient.imaging_required is False
     assert patient.laboratory_end is not None
 
 
-def test_diagnostic_evaluation_with_imaging(monkeypatch):
-    env, processes = create_processes()
-    patient = create_patient()
+def test_diagnostic_evaluation_with_imaging(
+    monkeypatch,
+    hospital_processes,
+    create_patient,
+):
+    processes = hospital_processes
+    patient = create_patient
 
     monkeypatch.setattr(
         "src.simulation.processes.physician_orders_laboratory",
@@ -203,9 +159,9 @@ def test_diagnostic_evaluation_with_imaging(monkeypatch):
         lambda level, rng: True,
     )
 
-    env.process(processes.diagnostic_evaluation(patient))
+    processes.env.process(processes.diagnostic_evaluation(patient))
 
-    env.run()
+    processes.env.run()
 
     assert patient.requires_laboratory is False
     assert patient.imaging_required is True
@@ -221,9 +177,11 @@ def test_diagnostic_evaluation_with_imaging(monkeypatch):
 
 def test_diagnostic_evaluation_with_laboratory_and_imaging(
     monkeypatch,
+    hospital_processes,
+    create_patient,
 ):
-    env, processes = create_processes()
-    patient = create_patient()
+    processes = hospital_processes
+    patient = create_patient
 
     monkeypatch.setattr(
         "src.simulation.processes.physician_orders_laboratory",
@@ -235,9 +193,9 @@ def test_diagnostic_evaluation_with_laboratory_and_imaging(
         lambda level, rng: True,
     )
 
-    env.process(processes.diagnostic_evaluation(patient))
+    hospital_processes.env.process(processes.diagnostic_evaluation(patient))
 
-    env.run()
+    hospital_processes.env.run()
 
     assert patient.requires_laboratory is True
     assert patient.imaging_required is True
@@ -246,75 +204,79 @@ def test_diagnostic_evaluation_with_laboratory_and_imaging(
     assert patient.imaging_end is not None
 
 
-def test_diagnosis_uses_eligible_resident(monkeypatch):
-    env, processes = create_processes()
-    patient = create_patient()
+def test_diagnosis_uses_eligible_resident(
+    monkeypatch,
+    hospital_processes,
+    create_patient,
+):
+    processes = hospital_processes
+    patient = create_patient
 
     patient.triage_level = TriageLevel.GREEN
 
-    env.process(processes.diagnosis(patient))
+    processes.env.process(processes.diagnosis(patient))
 
-    env.run()
+    processes.env.run()
 
     assert patient.diagnosis_confirmed is True
     assert patient.status == PatientStatus.DIAGNOSIS
 
 
-def test_diagnosis_uses_available_eligible_resident():
-    env, processes = create_processes()
-    patient = create_patient()
+def test_diagnosis_uses_available_eligible_resident(hospital_processes, create_patient):
+    processes = hospital_processes
+    patient = create_patient
 
     patient.triage_level = TriageLevel.GREEN
 
     r1_request = processes.resources.r1_residents.request()
 
-    env.process(processes.diagnosis(patient))
+    processes.env.process(processes.diagnosis(patient))
 
-    env.run()
+    processes.env.run()
 
     assert patient.diagnosis_confirmed is True
 
     processes.resources.r1_residents.release(r1_request)
 
 
-def test_diagnosis_esi_2_uses_r2_or_r3():
-    env, processes = create_processes()
+def test_diagnosis_esi_2_uses_r2_or_r3(hospital_processes, create_patient):
+    processes = hospital_processes
 
-    patient = create_patient()
+    patient = create_patient
     patient.triage_level = TriageLevel.ORANGE
 
-    env.process(processes.diagnosis(patient))
+    processes.env.process(processes.diagnosis(patient))
 
-    env.run()
+    processes.env.run()
 
     assert patient.diagnosis_confirmed is True
 
 
-def test_diagnosis_esi_1_uses_r3():
-    env, processes = create_processes()
+def test_diagnosis_esi_1_uses_r3(hospital_processes, create_patient):
+    processes = hospital_processes
 
-    patient = create_patient()
+    patient = create_patient
     patient.triage_level = TriageLevel.RED
 
-    env.process(processes.diagnosis(patient))
+    hospital_processes.env.process(processes.diagnosis(patient))
 
-    env.run()
+    hospital_processes.env.run()
 
     assert patient.diagnosis_confirmed is True
 
 
-def test_administer_medication_uses_nurse():
-    env, processes = create_processes()
-    patient = create_patient()
+def test_administer_medication_uses_nurse(hospital_processes, create_patient):
+    processes = hospital_processes
+    patient = create_patient
 
-    process = env.process(
+    process = processes.env.process(
         processes.administer_medication(
             patient,
             "oral",
         )
     )
 
-    env.run()
+    processes.env.run()
 
     assert process.triggered
     assert patient.medication_route == "oral"
@@ -322,18 +284,18 @@ def test_administer_medication_uses_nurse():
     assert patient.medication_administration_end is not None
 
 
-def test_administer_medication_duration_is_valid():
-    env, processes = create_processes()
-    patient = create_patient()
+def test_administer_medication_duration_is_valid(hospital_processes, create_patient):
+    processes = hospital_processes
+    patient = create_patient
 
-    env.process(
+    processes.env.process(
         processes.administer_medication(
             patient,
             "iv_bolus",
         )
     )
 
-    env.run()
+    processes.env.run()
 
     duration = (
         patient.medication_administration_end - patient.medication_administration_start
@@ -342,11 +304,13 @@ def test_administer_medication_duration_is_valid():
     assert 3 <= duration <= 10
 
 
-def test_administer_medication_rejects_invalid_route():
-    env, processes = create_processes()
-    patient = create_patient()
+def test_administer_medication_rejects_invalid_route(
+    hospital_processes, create_patient
+):
+    processes = hospital_processes
+    patient = create_patient
 
-    env.process(
+    processes.env.process(
         processes.administer_medication(
             patient,
             "invalid_route",
@@ -354,16 +318,16 @@ def test_administer_medication_rejects_invalid_route():
     )
 
     with pytest.raises(ValueError):
-        env.run()
+        processes.env.run()
 
 
-def test_pharmacy_validation_uses_pharmacist():
-    env, processes = create_processes()
-    patient = create_patient()
+def test_pharmacy_validation_uses_pharmacist(hospital_processes, create_patient):
+    processes = hospital_processes
+    patient = create_patient
 
-    env.process(processes.pharmacy_validation(patient))
+    hospital_processes.env.process(processes.pharmacy_validation(patient))
 
-    env.run()
+    processes.env.run()
 
     assert patient.pharmacy_validation_start is not None
     assert patient.pharmacy_validation_end is not None
@@ -373,13 +337,15 @@ def test_pharmacy_validation_uses_pharmacist():
     assert 1 <= duration <= 7
 
 
-def test_pharmacy_preparation_uses_pharmacy_technician():
-    env, processes = create_processes()
-    patient = create_patient()
+def test_pharmacy_preparation_uses_pharmacy_technician(
+    hospital_processes, create_patient
+):
+    processes = hospital_processes
+    patient = create_patient
 
-    env.process(processes.pharmacy_preparation(patient))
+    processes.env.process(processes.pharmacy_preparation(patient))
 
-    env.run()
+    processes.env.run()
 
     assert patient.pharmacy_preparation_start is not None
     assert patient.pharmacy_preparation_end is not None
@@ -389,13 +355,13 @@ def test_pharmacy_preparation_uses_pharmacy_technician():
     assert 3 <= duration <= 12
 
 
-def test_pharmacy_distribution_has_valid_duration():
-    env, processes = create_processes()
-    patient = create_patient()
+def test_pharmacy_distribution_has_valid_duration(hospital_processes, create_patient):
+    processes = hospital_processes
+    patient = create_patient
 
-    env.process(processes.pharmacy_distribution(patient))
+    hospital_processes.env.process(processes.pharmacy_distribution(patient))
 
-    env.run()
+    processes.env.run()
 
     duration = patient.pharmacy_distribution_end - patient.pharmacy_distribution_start
 
@@ -446,32 +412,15 @@ def test_anticoagulation_route_distribution():
     assert 0.58 <= sc_probability <= 0.62
 
 
-def test_treatment_to_medication_administration_flow(monkeypatch):
-    env = simpy.Environment()
+def test_treatment_to_medication_administration_flow(
+    monkeypatch,
+    hospital_context,
+    create_patient,
+):
 
-    scenario = SCENARIO_1_MORNING
+    processes = hospital_context
 
-    resources = HospitalResources(
-        env=env,
-        scenario=scenario,
-    )
-
-    metrics = SimulationMetrics()
-
-    rng = random.Random(42)
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=rng,
-        scenario=scenario,
-    )
-
-    patient = Patient(
-        id=1,
-        arrival_time=0.0,
-    )
+    patient = create_patient
 
     monkeypatch.setattr(
         "src.simulation.processes.requires_medication",
@@ -493,13 +442,13 @@ def test_treatment_to_medication_administration_flow(monkeypatch):
         lambda category, rng: True,
     )
 
-    env.process(processes.treatment(patient))
+    processes.env.process(processes.processes.treatment(patient))
 
-    env.run()
+    processes.env.run()
 
-    assert patient.medication_category == (MedicationCategory.ANTIBIOTIC)
+    assert patient.medication_category == MedicationCategory.ANTIBIOTIC
 
-    assert patient.medication_route == (MedicationRoute.IV_INFUSION)
+    assert patient.medication_route == MedicationRoute.IV_INFUSION
 
     assert patient.pharmacy_preparation_required is True
 
@@ -521,32 +470,15 @@ def test_treatment_to_medication_administration_flow(monkeypatch):
     assert patient.pharmacy_distribution_end <= patient.medication_administration_start
 
 
-def test_treatment_to_medication_administration_flow_is_none(monkeypatch):
-    env = simpy.Environment()
+def test_treatment_to_medication_administration_flow_is_none(
+    monkeypatch,
+    hospital_context,
+    create_patient,
+):
 
-    scenario = SCENARIO_1_MORNING
+    processes = hospital_context
 
-    resources = HospitalResources(
-        env=env,
-        scenario=scenario,
-    )
-
-    metrics = SimulationMetrics()
-
-    rng = random.Random(42)
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=rng,
-        scenario=scenario,
-    )
-
-    patient = Patient(
-        id=1,
-        arrival_time=0.0,
-    )
+    patient = create_patient
 
     monkeypatch.setattr(
         "src.simulation.processes.requires_medication",
@@ -568,9 +500,9 @@ def test_treatment_to_medication_administration_flow_is_none(monkeypatch):
         lambda category, rng: False,
     )
 
-    env.process(processes.treatment(patient))
+    processes.env.process(processes.processes.treatment(patient))
 
-    env.run()
+    processes.env.run()
     assert patient.pharmacy_preparation_start is None
     assert patient.pharmacy_preparation_end is None
 
@@ -587,41 +519,23 @@ def test_treatment_to_medication_administration_flow_is_none(monkeypatch):
     assert patient.pharmacy_distribution_end <= patient.medication_administration_start
 
 
-def test_observation_records_observation_times(monkeypatch):
-    env = simpy.Environment()
+def test_observation_records_observation_times(
+    monkeypatch,
+    hospital_context,
+    create_patient,
+):
 
-    scenario = SCENARIO_1_MORNING
+    processes = hospital_context
 
-    resources = HospitalResources(
-        env=env,
-        scenario=scenario,
-    )
-
-    metrics = SimulationMetrics()
-
-    rng = random.Random(42)
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=rng,
-        scenario=scenario,
-    )
-
-    patient = Patient(
-        id=1,
-        arrival_time=0.0,
-        triage_level=TriageLevel.YELLOW,
-    )
+    patient = create_patient
 
     monkeypatch.setattr(
         "src.simulation.processes.deteriorates_in_observation",
         lambda level, rng: False,
     )
 
-    env.process(processes.observation(patient))
-    env.run()
+    processes.env.process(processes.processes.observation(patient))
+    processes.env.run()
 
     assert patient.observation_start is not None
     assert patient.observation_end is not None
@@ -633,42 +547,22 @@ def test_observation_records_observation_times(monkeypatch):
 
 def test_observation_deterioration_occurs_in_observation_area(
     monkeypatch,
+    hospital_context,
+    create_patient,
 ):
-    env = simpy.Environment()
 
-    scenario = SCENARIO_1_MORNING
+    processes = hospital_context
 
-    resources = HospitalResources(
-        env=env,
-        scenario=scenario,
-    )
-
-    metrics = SimulationMetrics()
-
-    rng = random.Random(42)
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=rng,
-        scenario=scenario,
-    )
-
-    patient = Patient(
-        id=1,
-        arrival_time=0.0,
-        triage_level=TriageLevel.YELLOW,
-    )
+    patient = create_patient
 
     monkeypatch.setattr(
         "src.simulation.processes.deteriorates_in_observation",
         lambda level, rng: True,
     )
 
-    env.process(processes.observation_deterioration(patient))
+    processes.env.process(processes.processes.observation_deterioration(patient))
 
-    env.run()
+    processes.env.run()
 
     assert patient.current_area == "observation"
 
@@ -679,38 +573,18 @@ def test_observation_deterioration_occurs_in_observation_area(
 
 def test_observation_deterioration_results_in_death_without_rosc(
     monkeypatch,
+    hospital_context,
+    create_patient,
 ):
-    env = simpy.Environment()
 
-    scenario = SCENARIO_1_MORNING
-
-    resources = HospitalResources(
-        env=env,
-        scenario=scenario,
-    )
-
-    metrics = SimulationMetrics()
-
-    rng = random.Random(42)
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=rng,
-        scenario=scenario,
-    )
-    patient = Patient(
-        id=1,
-        arrival_time=0.0,
-        triage_level=TriageLevel.YELLOW,
-    )
+    processes = hospital_context
+    patient = create_patient
     monkeypatch.setattr(
         "src.simulation.processes.resuscitation_achieves_rosc",
         lambda rng: False,
     )
-    env.process(processes.observation(patient))
-    env.run()
+    processes.env.process(processes.processes.observation(patient))
+    processes.env.run()
 
     assert patient.deceased is True
     assert patient.status == PatientStatus.DECEASED
@@ -719,143 +593,93 @@ def test_observation_deterioration_results_in_death_without_rosc(
 
 
 def test_observation_deterioration_transfers_patient_after_rosc(
+    hospital_context,
     monkeypatch,
+    create_patient,
 ):
-    env = simpy.Environment()
+    patient = create_patient
 
-    scenario = SCENARIO_1_MORNING
+    patient.hemodynamic_stability = True
+    patient.inpatient_care_need = True
 
-    resources = HospitalResources(
-        env=env,
-        scenario=scenario,
+    monkeypatch.setattr(
+        "src.simulation.processes.deteriorates_in_observation",
+        lambda level, rng: True,
     )
 
-    metrics = SimulationMetrics()
-
-    rng = random.Random(42)
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=rng,
-        scenario=scenario,
-    )
-    patient = Patient(
-        id=1,
-        arrival_time=0.0,
-        triage_level=TriageLevel.YELLOW,
-    )
     monkeypatch.setattr(
         "src.simulation.processes.resuscitation_achieves_rosc",
         lambda rng: True,
     )
+
+    env = hospital_context.env
+    processes = hospital_context.processes
+
     env.process(processes.observation(patient))
     env.run()
 
     assert patient.deceased is False
     assert patient.shock_stabilized is True
     assert patient.clinical_status == "stabilized"
-    assert patient.hospitalized is True
-    assert patient.disposition == "hospitalization"
-    assert patient.departure_time is not None
+    assert patient.disposition == Disposition.HOSPITALIZATION
 
 
 def test_observation_ends_with_follow_up(
+    hospital_context,
     monkeypatch,
+    create_patient,
 ):
-    env = simpy.Environment()
-
-    scenario = SCENARIO_1_MORNING
-
-    resources = HospitalResources(
-        env=env,
-        scenario=scenario,
-    )
-
-    metrics = SimulationMetrics()
-
-    rng = random.Random(42)
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=rng,
-        scenario=scenario,
-    )
-
-    patient = Patient(
-        id=1,
-        arrival_time=0.0,
-        triage_level=TriageLevel.YELLOW,
-    )
+    patient = create_patient
 
     monkeypatch.setattr(
         "src.simulation.processes.deteriorates_in_observation",
         lambda level, rng: False,
     )
 
-    monkeypatch.setattr(
-        "src.simulation.processes.determine_observation_disposition",
-        lambda rng: "follow_up",
-    )
+    patient.hemodynamic_stability = True
+    patient.critical_support_required = False
+    patient.observation_eligible = False
+    patient.inpatient_care_need = False
+    patient.discharge_eligible = True
 
-    env.process(processes.observation(patient))
-    env.run()
+    hospital_context.env.process(hospital_context.processes.observation(patient))
 
-    assert patient.disposition == "follow_up"
+    hospital_context.env.run()
 
-    assert patient.outpatient_referral is True
+    assert patient.disposition == Disposition.DISCHARGE
+
+    assert patient.outpatient_referral is False
     assert patient.hospitalized is False
     assert patient.departure_time is not None
 
 
 def test_observation_ends_hospitalization(
+    hospital_context,
     monkeypatch,
 ):
-    env = simpy.Environment()
-
-    scenario = SCENARIO_1_MORNING
-
-    resources = HospitalResources(
-        env=env,
-        scenario=scenario,
-    )
-
-    metrics = SimulationMetrics()
-
-    rng = random.Random(42)
-
-    processes = HospitalProcesses(
-        env=env,
-        resources=resources,
-        metrics=metrics,
-        rng=rng,
-        scenario=scenario,
-    )
-
     patient = Patient(
         id=1,
         arrival_time=0.0,
         triage_level=TriageLevel.YELLOW,
     )
 
+    patient.hemodynamic_stability = True
+    patient.critical_support_required = False
+    patient.observation_eligible = False
+    patient.inpatient_care_need = True
+    patient.discharge_eligible = False
+
     monkeypatch.setattr(
         "src.simulation.processes.deteriorates_in_observation",
         lambda level, rng: False,
     )
 
-    monkeypatch.setattr(
-        "src.simulation.processes.determine_observation_disposition",
-        lambda rng: "hospitalization",
-    )
+    env = hospital_context.env
+    processes = hospital_context.processes
 
     env.process(processes.observation(patient))
     env.run()
 
-    assert patient.disposition == "hospitalization"
-
-    assert patient.hospitalized is True
-    assert patient.outpatient_referral is False
-    assert patient.departure_time is not None
+    assert patient.observation_start is not None
+    assert patient.observation_end is not None
+    assert patient.disposition == Disposition.HOSPITALIZATION

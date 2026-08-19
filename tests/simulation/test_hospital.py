@@ -1,16 +1,12 @@
 from src.scenarios.scenarios import (
-    SCENARIO_1_MORNING,
     SCENARIO_2_MORNING,
     SCENARIO_4_MORNING,
 )
 from src.simulation.hospital import HospitalSimulation
 
 
-def test_simulation_uses_scenario_resources():
-    simulation = HospitalSimulation(
-        scenario=SCENARIO_1_MORNING,
-        seed=42,
-    )
+def test_simulation_uses_scenario_resources(hospital_processes):
+    simulation = hospital_processes
 
     resources = simulation.resources
 

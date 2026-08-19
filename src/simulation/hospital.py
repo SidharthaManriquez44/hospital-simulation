@@ -3,6 +3,9 @@ import random
 import simpy
 
 from src import config
+from src.clinical.default_decision_engine import (
+    DefaultClinicalDecisionEngine,
+)
 from src.models.patient import Patient
 from src.resources.resources import HospitalResources
 from src.scenarios.scenarios import Scenario
@@ -31,12 +34,15 @@ class HospitalSimulation:
             scenario=scenario,
         )
 
+        self.clinical_decision_engine = DefaultClinicalDecisionEngine()
+
         self.processes = HospitalProcesses(
             env=self.env,
             resources=self.resources,
             metrics=self.metrics,
             rng=self.rng,
             scenario=scenario,
+            clinical_decision_engine=self.clinical_decision_engine,
         )
 
         self.patient_id = 0
